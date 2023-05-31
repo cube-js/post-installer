@@ -22,6 +22,23 @@
 
 ## Constraints
 
+Variables and files supports contstraints, you can define it:
+
+```
+  "constraints": {
+    "platform": [
+      "linux"
+    ],
+    "arch": [
+      "x64"
+    ]
+  }
+```
+
+Supported types:
+
+- platform: `win32` / `darwin` / `linux` / `aix` / `android` / `freebsd` / `openbsd` / `cygwin`
+- arch: `x64` / `arm64`
 
 
 ## Variables

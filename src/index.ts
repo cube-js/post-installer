@@ -61,25 +61,30 @@ function resolveVariableValue(value: any): string | false {
   return false;
 }
 
+function resolveConstraints(section: any): boolean {
+  let constraintPass = true;
+
+  if (section.constraints) {
+    for (const [constraintName, constraintDetails] of Object.entries(
+      section.constraints
+    )) {
+      if (!resolveConstraint(constraintName, constraintDetails)) {
+        constraintPass = false;
+        break;
+      }
+    }
+  }
+
+  return constraintPass;
+}
+
 function resolveVars(variables: Record<string, any>): UrlVariable[] {
   const res = [];
 
   for (const [variableName, variable] of Object.entries(variables)) {
-    let constraintPass = true;
-
-    if (variable.constraints) {
-      for (const [constraintName, constraintDetails] of Object.entries(
-        variable.constraints
-      )) {
-        if (!resolveConstraint(constraintName, constraintDetails)) {
-          constraintPass = false;
-          break;
-        }
-      }
-    }
-
     let value = variable["default"];
 
+    let constraintPass = resolveConstraints(variable);
     if (constraintPass) {
       if (variable.value) {
         const resolvedValue = resolveVariableValue(variable.value);
@@ -134,12 +139,18 @@ function resolvePath(path: string, variables: UrlVariable[]): string {
 
     for (const file of pkg.resources.files) {
       const url = resolvePath(file.host + file.path, variables);
-      console.log(`Downloading: ${url}`);
 
-      await downloadAndExtractFile(url, {
-        cwd: process.cwd(),
-        showProgress: true,
-      });
+      let constraintPass = resolveConstraints(file);
+      if (constraintPass) {
+        console.log(`Downloading: ${url}`);
+
+        await downloadAndExtractFile(url, {
+          cwd: process.cwd(),
+          showProgress: true,
+        });
+      } else {
+        console.log(`Skiping downloading for ${file.path}: constraints failed`);
+      }
     }
   } catch (e: any) {
     await displayCLIError(e, "Native Installer");
