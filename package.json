@@ -3,7 +3,9 @@
   "version": "0.0.3",
   "description": "Resources installer",
   "main": "dist/index.js",
-  "bin": "bin/post-installer",
+  "bin": {
+    "post-installer": "./dist/index.js"
+  },
   "scripts": {
     "build": "tsc",
     "tsc": "tsc --build",
@@ -14,7 +16,6 @@
     "node": ">=14.0.0"
   },
   "files": [
-    "bin",
     "dist"
   ],
   "author": "Cube Dev, Inc.",
