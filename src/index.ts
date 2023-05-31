@@ -33,6 +33,10 @@ function resolveConstraint(name: string, constraintDetails: any): boolean {
     return constraintDetails.includes(process.arch);
   }
 
+  if (name === "platform-arch") {
+    return constraintDetails.includes(`${process.platform}-${process.arch}`);
+  }
+
   displayCLIWarning(`Unknown constraint name: ${name}, pass: false`);
 
   return false;

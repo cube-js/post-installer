@@ -39,6 +39,7 @@ Supported types:
 
 - platform: `win32` / `darwin` / `linux` / `aix` / `android` / `freebsd` / `openbsd` / `cygwin`
 - arch: `x64` / `arm64`
+- platform-arch: `linux-x64`, etc.
 
 
 ## Variables
