@@ -2,10 +2,10 @@
 # yarn lockfile v1
 
 
-"@cubejs-backend/shared@^0.33":
-  version "0.33.19"
-  resolved "https://registry.yarnpkg.com/@cubejs-backend/shared/-/shared-0.33.19.tgz#2189186220169fbc89a9a9fcf21aff15207eba5b"
-  integrity sha512-AFGb9ZvKTaIqLQVbd37eBe9YUDpDRgcM8OU9wwlw+0dFQfuTM35vA0LV4jmPmXKrF/SAA9bzDPHG3+GM1kRneQ==
+"@cubejs-backend/shared@^0.33.20":
+  version "0.33.20"
+  resolved "https://registry.yarnpkg.com/@cubejs-backend/shared/-/shared-0.33.20.tgz#3d9fa60041599cca9fe4c04df05daa4b8ab8675f"
+  integrity sha512-PANWng9VLr6+55QVHQv23TyDO2o1nwEWMAXd/ujUmD7AyyCHih7UllgoHYZW18vyyQm3qPxR/J7TLOACW2OcLw==
   dependencies:
     "@oclif/color" "^0.1.2"
     bytes "^3.1.0"

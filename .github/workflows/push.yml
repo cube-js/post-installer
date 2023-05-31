@@ -16,9 +16,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 14.x
-      - name: Yarn install
-        uses: borales/actions-yarn@v2.3.0
-        with:
-          cmd: install --frozen-lockfile
+      - name: Set Yarn version
+        run: yarn policies set-version v1.22.19
       - name: Compile
         run: npm run build
