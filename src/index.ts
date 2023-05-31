@@ -12,11 +12,11 @@ import * as process from "process";
 import * as fs from "fs";
 import * as path from "path";
 
-const ownPackageJSON = fs.readFileSync(
-  path.join(__dirname, "..", "package.json"),
+const packageContent = fs.readFileSync(
+  path.join(process.cwd(), "package.json"),
   "utf8"
 );
-const pkg = JSON.parse(ownPackageJSON).version;
+const pkg = JSON.parse(packageContent);
 
 interface UrlVariable {
   resolve(url: string): string;
@@ -135,7 +135,7 @@ function resolvePath(path: string, variables: UrlVariable[]): string {
       );
     }
 
-    const variables = resolveVars(pkg.resources.vars);
+    const variables = resolveVars(pkg.resources.vars || []);
 
     for (const file of pkg.resources.files) {
       const url = resolvePath(file.host + file.path, variables);
