@@ -2,8 +2,10 @@
   "name": "@cubejs-infra/post-installer",
   "version": "0.0.1",
   "description": "Resources installer",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "bin": "bin/post-installer",
   "scripts": {
+    "build": "tsc",
     "tsc": "tsc --build",
     "tsc:watch": "tsc --build --watch",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -11,6 +13,10 @@
   "engines": {
     "node": ">=14.0.0"
   },
+  "files": [
+    "bin",
+    "dist"
+  ],
   "author": "Cube Dev, Inc.",
   "license": "Apache-2.0",
   "devDependencies": {
@@ -21,5 +27,8 @@
   "dependencies": {
     "@cubejs-backend/shared": "^0.33",
     "source-map-support": "^0.5.21"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
