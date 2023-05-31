@@ -20,6 +20,14 @@ jobs:
           node-version: 14.x
       - name: Set Yarn version
         run: yarn policies set-version v1.22.19
+      - name: Yarn install
+        uses: nick-invision/retry@v2
+        with:
+          max_attempts: 3
+          retry_on: error
+          retry_wait_seconds: 15
+          timeout_minutes: 5
+          command: yarn install --frozen-lockfile
       - name: Compile
         run: npm run build
       - name: Set NPM token
