@@ -156,5 +156,6 @@ function resolvePath(path: string, variables: UrlVariable[]): string {
     }
   } catch (e: any) {
     await displayCLIError(e, "Native Installer");
+    process.exit(1);
   }
 })();
