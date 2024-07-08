@@ -1,6 +1,6 @@
 {
   "name": "@cubejs-infra/post-installer",
-  "version": "0.0.7",
+  "version": "0.1.0",
   "description": "Resources installer",
   "main": "dist/index.js",
   "bin": {
