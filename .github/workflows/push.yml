@@ -5,6 +5,30 @@ on:
   - pull_request
 
 jobs:
+  upload_artifact:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-linux-arm64-glibc-3.12.node
+          path: example/index.node
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-linux-x64-glibc-3.12.node
+          path: example/index.node
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-linux-arm64-glibc-fallback.node
+          path: example/index.node
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-linux-x64-glibc-fallback.node
+          path: example/index.node
+
   npm:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -28,3 +52,15 @@ jobs:
           command: yarn install --frozen-lockfile
       - name: Compile
         run: npm run build
+      - name: Run example
+        run: cd example && node ../dist/bin.js
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+      - name: Run example
+        run: cd example && node ../dist/bin.js
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

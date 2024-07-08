@@ -1,0 +1,40 @@
+{
+  "name": "example",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "resources": {
+    "vars": {
+      "libpython_version": {
+        "default": "fallback",
+        "value": [
+          "libpython",
+          [
+            "3.12",
+            "3.11",
+            "3.10",
+            "3.9"
+          ]
+        ],
+        "constraints": {
+          "platform-arch": [
+            "linux-x64",
+            "linux-arm64"
+          ]
+        }
+      }
+    },
+    "files": [
+      {
+        "host": "github_artifact://cube-js/post-installer/actions/current",
+        "name": "native-${platform}-${arch}-${libc}-${libpython_version}.node",
+        "not_found": "Your system is not supported by @cubejs-backend/native, some feature will be unavailable."
+      }
+    ]
+  }
+}

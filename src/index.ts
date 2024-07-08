@@ -88,7 +88,7 @@ function resolveVars(variables: Record<string, any>): UrlVariable[] {
   const res = [];
 
   for (const [variableName, variable] of Object.entries(variables)) {
-    let value = variable["default"];
+    let value: string | null = null;
 
     let constraintPass = resolveConstraints(variable);
     if (constraintPass) {
@@ -100,9 +100,17 @@ function resolveVars(variables: Record<string, any>): UrlVariable[] {
       }
     }
 
+    if (!value) {
+      if ("default" in variable) {
+        value = variable["default"];
+      } else {
+        throw new Error(`Unable to resolve variable ${variableName}`);
+      }
+    }
+
     res.push({
       resolve(url: string): string {
-        url = url.replace("${" + variableName + "}", value);
+        url = url.replace("${" + variableName + "}", value as string);
 
         return url;
       },
@@ -120,7 +128,10 @@ function resolveLibc(): string {
   return "unknown";
 }
 
-function resolvePath(path: string, variables: UrlVariable[]): string {
+import { Octokit } from "@octokit/core";
+import { restEndpointMethods } from "@octokit/plugin-rest-endpoint-methods";
+
+function resolveSimplePath(path: string, variables: UrlVariable[]): string {
   path = path.replace("${version}", pkg.version);
   path = path.replace("${platform}", process.platform);
   path = path.replace("${arch}", process.arch);
@@ -131,6 +142,75 @@ function resolvePath(path: string, variables: UrlVariable[]): string {
   }
 
   return path;
+}
+
+async function resolveGithubArtifactPath(
+  url: string,
+  name: string,
+  variables: UrlVariable[]
+): Promise<{ url: string; name: string }> {
+  const extractParamsRegexp =
+    /github_artifact:\/\/(?<owner>[a-z-]+)\/(?<repo>[a-z-]+)\/actions\/(?<workflow>[a-zA-Z${}]+)/;
+
+  const params = url.match(extractParamsRegexp);
+
+  const MyOctokit = Octokit.plugin(restEndpointMethods);
+  const ghClient = new MyOctokit({
+    auth: process.env.GH_TOKEN,
+  });
+
+  if (!params || !("groups" in params)) {
+    throw new Error("Unable to decode url from github_artifact protocol");
+  }
+
+  const listWorkflowRunArtifacts =
+    await ghClient.rest.actions.listWorkflowRunArtifacts({
+      owner: params.groups?.owner as any,
+      repo: params.groups?.repo as any,
+      run_id: process.env.GITHUB_RUN_ID as any,
+    });
+
+  const resolvedName = resolveSimplePath(name, variables);
+  const artifactToDownload = listWorkflowRunArtifacts.data.artifacts.find(
+    (artifact) => artifact.name === resolvedName
+  );
+  if (!artifactToDownload) {
+    throw new Error(`Artifact '${resolvedName}' doesn't exist`);
+  }
+
+  const arhiveUrl = await ghClient.rest.actions.downloadArtifact({
+    owner: params.groups?.owner as any,
+    repo: params.groups?.repo as any,
+    artifact_id: artifactToDownload.id,
+    archive_format: "zip",
+  });
+
+  return {
+    url: arhiveUrl.url,
+    name: resolvedName,
+  };
+}
+
+async function resolvePath(
+  file: any,
+  variables: UrlVariable[]
+): Promise<{ url: string; name: string }> {
+  if (file.host.startsWith("github_artifact://")) {
+    return resolveGithubArtifactPath(file.host, file.name, variables);
+  } else if (
+    file.host.startsWith("http://") ||
+    file.host.startsWith("https://")
+  ) {
+    const url = resolveSimplePath(file.host + file.path, variables);
+
+    return {
+      url,
+      // Use the same
+      name: url,
+    };
+  } else {
+    throw new Error(`Unsupported protocol in path: ${path}`);
+  }
 }
 
 (async () => {
@@ -144,18 +224,20 @@ function resolvePath(path: string, variables: UrlVariable[]): string {
     const variables = resolveVars(pkg.resources.vars || []);
 
     for (const file of pkg.resources.files) {
-      const url = resolvePath(file.host + file.path, variables);
+      const toDownload = await resolvePath(file, variables);
 
       let constraintPass = resolveConstraints(file);
       if (constraintPass) {
-        console.log(`Downloading: ${url}`);
+        console.log(`Downloading: ${toDownload.name}`);
 
-        await downloadAndExtractFile(url, {
+        await downloadAndExtractFile(toDownload.url, {
           cwd: process.cwd(),
           showProgress: true,
         });
       } else {
-        console.log(`Skiping downloading for ${file.path}: constraints failed`);
+        console.log(
+          `Skiping downloading for ${toDownload.name}: constraints failed`
+        );
       }
     }
   } catch (e: any) {

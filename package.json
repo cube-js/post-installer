@@ -27,6 +27,8 @@
   },
   "dependencies": {
     "@cubejs-backend/shared": "0.33.20",
+    "@octokit/core": "^5",
+    "@octokit/plugin-rest-endpoint-methods": "^10",
     "source-map-support": "^0.5.21"
   },
   "publishConfig": {
