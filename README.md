@@ -67,6 +67,13 @@ You can define and use variables in `path` & `host`.
             "x64"
           ]
         }
+      },
+      "feature_or_default": {
+        "default": "default",
+        "value": [
+          "env",
+          "YOUR_ENV_NAME"
+        ]
       }
     },
 }

@@ -58,6 +58,13 @@ function resolveVariableValue(value: any): string | false {
     }
   }
 
+  if (Array.isArray(value) && value.length == 2) {
+    const [valueName, env_name] = value;
+    if (valueName === "env") {
+      return process.env[env_name] || false;
+    }
+  }
+
   if (value === "libc") {
     return resolveLibc();
   }
