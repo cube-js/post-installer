@@ -13,7 +13,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "files": [
     "dist"
@@ -26,7 +26,7 @@
     "typescript": "^5.0.4"
   },
   "dependencies": {
-    "@cubejs-backend/shared": "0.33.20",
+    "@cubejs-backend/shared": "1.7.20",
     "@octokit/core": "^5",
     "@octokit/plugin-rest-endpoint-methods": "^10",
     "source-map-support": "^0.5.21"
