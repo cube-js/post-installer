@@ -10,7 +10,7 @@
     "build": "tsc",
     "tsc": "tsc --build",
     "tsc:watch": "tsc --build --watch",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest run"
   },
   "engines": {
     "node": ">=20.0.0"
@@ -24,7 +24,8 @@
     "@tsconfig/node20": "^20.1.6",
     "@types/mime-types": "^3.0.1",
     "@types/node": "^20",
-    "typescript": "^5.0.4"
+    "typescript": "^5.0.4",
+    "vitest": "^3"
   },
   "dependencies": {
     "@cubejs-backend/shared": "1.7.42",

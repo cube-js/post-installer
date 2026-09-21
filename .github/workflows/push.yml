@@ -53,6 +53,8 @@ jobs:
           command: yarn install --frozen-lockfile
       - name: Compile
         run: npm run build
+      - name: Unit tests
+        run: npm test
       - name: Run example
         run: cd example && node ../dist/bin.js
         env:

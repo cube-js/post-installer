@@ -1,5 +1,6 @@
 {
   "extends": "@tsconfig/node20/tsconfig.json",
+  "include": ["src"],
   "compilerOptions": {
     "incremental": true,                              /* Save .tsbuildinfo files to allow for incremental compilation of projects. */
 
