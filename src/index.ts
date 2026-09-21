@@ -13,6 +13,8 @@ import {
 import * as process from "process";
 import * as fs from "fs";
 import * as path from "path";
+import { URL } from "url";
+import * as mime from "mime-types";
 
 const packageContent = fs.readFileSync(
   path.join(process.cwd(), "package.json"),
@@ -151,29 +153,105 @@ function resolveSimplePath(path: string, variables: UrlVariable[]): string {
   return path;
 }
 
+// mime-db has no entry for the compressed-tar shorthands
+const EXTRA_MIME_TYPES: Record<string, string> = {
+  tgz: "application/gzip",
+  tbz2: "application/x-bzip2",
+  txz: "application/x-xz",
+};
+
+// Formats extractArchive() from @cubejs-backend/shared is able to unpack.
+// Zip containers that are consumed as a single file (jar, whl, apk, ...) are
+// deliberately not here, they have their own mime types.
+const EXTRACTABLE_MIME_TYPES = [
+  "application/gzip",
+  "application/x-gzip",
+  "application/x-tar",
+  "application/zip",
+];
+
+function detectMimeType(url: string): string | false {
+  // pathname keeps the query string and the hash out of the extension lookup
+  const parsed = parseUrl(url);
+  const pathname = parsed ? decodeURIComponent(parsed.pathname) : url;
+  const extension = path.extname(pathname).toLowerCase().slice(1);
+
+  return EXTRA_MIME_TYPES[extension] || mime.lookup(pathname);
+}
+
+// Detected from the resolved url, because the downloaded file is saved under a
+// random name without an extension, and extractArchive throws on anything it
+// doesn't recognize as an archive.
+function looksLikeArchive(urlOrPath: string): boolean {
+  const mimeType = detectMimeType(urlOrPath);
+
+  return mimeType !== false && EXTRACTABLE_MIME_TYPES.includes(mimeType);
+}
+
+function resolveDst(file: any, variables: UrlVariable[]): string | null {
+  if (!file.dst) {
+    return null;
+  }
+
+  const dst = resolveSimplePath(file.dst, variables);
+  const cwd = path.resolve(process.cwd());
+  const target = path.resolve(cwd, dst);
+
+  if (target !== cwd && !target.startsWith(cwd + path.sep)) {
+    throw new Error(`dst must stay inside the package directory, got: ${dst}`);
+  }
+
+  return dst;
+}
+
+const GITHUB_ARTIFACT_PROTOCOL = "github_artifact://";
+// WHATWG URL rejects "_" in a scheme, so it is swapped for a valid one before parsing
+const GITHUB_ARTIFACT_PARSABLE_PROTOCOL = "github-artifact://";
+
+function parseUrl(url: string): URL | null {
+  try {
+    return new URL(url);
+  } catch (e) {
+    return null;
+  }
+}
+
+// github_artifact://<owner>/<repo>/actions/<workflow>
+function parseGithubArtifactUrl(url: string): { owner: string; repo: string } {
+  const parsed = parseUrl(
+    GITHUB_ARTIFACT_PARSABLE_PROTOCOL +
+      url.slice(GITHUB_ARTIFACT_PROTOCOL.length)
+  );
+  const segments = parsed ? parsed.pathname.split("/").filter(Boolean) : [];
+  const owner = parsed?.hostname;
+  const [repo, actions, workflow] = segments;
+
+  if (!owner || !repo || actions !== "actions" || !workflow) {
+    throw new Error(
+      `Unable to decode url from github_artifact protocol, expected ` +
+        `${GITHUB_ARTIFACT_PROTOCOL}<owner>/<repo>/actions/<workflow>, got: ${url}`
+    );
+  }
+
+  return { owner, repo };
+}
+
 async function resolveGithubArtifactPath(
   url: string,
   name: string,
   variables: UrlVariable[]
 ): Promise<{ url: string; name: string }> {
-  const extractParamsRegexp =
-    /github_artifact:\/\/(?<owner>[a-z-]+)\/(?<repo>[a-z-]+)\/actions\/(?<workflow>[a-zA-Z${}]+)/;
-
-  const params = url.match(extractParamsRegexp);
+  const { owner, repo } = parseGithubArtifactUrl(url);
 
   const MyOctokit = Octokit.plugin(restEndpointMethods);
   const ghClient = new MyOctokit({
     auth: process.env.GH_TOKEN,
   });
 
-  if (!params || !("groups" in params)) {
-    throw new Error("Unable to decode url from github_artifact protocol");
-  }
-
   const listWorkflowRunArtifacts =
     await ghClient.rest.actions.listWorkflowRunArtifacts({
-      owner: params.groups?.owner as any,
-      repo: params.groups?.repo as any,
+      owner,
+      repo,
       run_id: process.env.GITHUB_RUN_ID as any,
     });
 
@@ -186,8 +264,8 @@ async function resolveGithubArtifactPath(
   }
 
   const arhiveUrl = await ghClient.rest.actions.downloadArtifact({
-    owner: params.groups?.owner as any,
-    repo: params.groups?.repo as any,
+    owner,
+    repo,
     artifact_id: artifactToDownload.id,
     archive_format: "zip",
   });
@@ -201,9 +279,22 @@ async function resolveGithubArtifactPath(
 async function resolvePath(
   file: any,
   variables: UrlVariable[]
-): Promise<{ url: string; name: string }> {
-  if (file.host.startsWith("github_artifact://")) {
-    return resolveGithubArtifactPath(file.host, file.name, variables);
+): Promise<{ url: string; name: string; extract: boolean }> {
+  const extractOverride =
+    typeof file.extract === "boolean" ? file.extract : null;
+
+  if (file.host.startsWith(GITHUB_ARTIFACT_PROTOCOL)) {
+    const resolved = await resolveGithubArtifactPath(
+      file.host,
+      file.name,
+      variables
+    );
+
+    return {
+      ...resolved,
+      // GitHub always packs artifacts into a zip
+      extract: extractOverride ?? true,
+    };
   } else if (
     file.host.startsWith("http://") ||
     file.host.startsWith("https://")
@@ -214,9 +305,10 @@ async function resolvePath(
       url,
       // Use the same
       name: url,
+      extract: extractOverride ?? looksLikeArchive(url),
     };
   } else {
-    throw new Error(`Unsupported protocol in path: ${path}`);
+    throw new Error(`Unsupported protocol in path: ${file.host}`);
   }
 }
 
@@ -231,10 +323,26 @@ async function resolvePath(
     const variables = resolveVars(pkg.resources.vars || []);
 
     for (const file of pkg.resources.files) {
-      const toDownload = await resolvePath(file, variables);
+      if (!resolveConstraints(file)) {
+        console.log(
+          `Skiping downloading for ${
+            file.name || file.path || file.host
+          }: constraints failed`
+        );
 
-      let constraintPass = resolveConstraints(file);
-      if (constraintPass) {
+        continue;
+      }
+
+      const toDownload = await resolvePath(file, variables);
+      const dst = resolveDst(file, variables);
+
+      if (toDownload.extract) {
+        if (dst) {
+          displayCLIWarning(
+            `dst is ignored for ${toDownload.name}, because it is extracted into the package directory`
+          );
+        }
+
         console.log(`Downloading: ${toDownload.name}`);
 
         await downloadAndExtractFile(toDownload.url, {
@@ -242,9 +350,25 @@ async function resolvePath(
           showProgress: true,
         });
       } else {
-        console.log(
-          `Skiping downloading for ${toDownload.name}: constraints failed`
-        );
+        if (!dst) {
+          throw new Error(
+            `dst is required for ${toDownload.name}, because it is downloaded without extraction`
+          );
+        }
+
+        // downloadAndExtractFile creates cwd, but not subdirectories of dstFileName
+        fs.mkdirSync(path.dirname(path.resolve(process.cwd(), dst)), {
+          recursive: true,
+        });
+
+        console.log(`Downloading: ${toDownload.name} -> ${dst}`);
+
+        await downloadAndExtractFile(toDownload.url, {
+          cwd: process.cwd(),
+          showProgress: true,
+          skipExtract: true,
+          dstFileName: dst,
+        });
       }
     }
   } catch (e: any) {

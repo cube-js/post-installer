@@ -57,6 +57,8 @@ jobs:
         run: cd example && node ../dist/bin.js
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check plain file was downloaded
+        run: test -s example/downloaded/LICENSE.txt
       - name: Install Python
         uses: actions/setup-python@v5
         with:
@@ -65,3 +67,5 @@ jobs:
         run: cd example && node ../dist/bin.js
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check plain file was downloaded
+        run: test -s example/downloaded/LICENSE.txt

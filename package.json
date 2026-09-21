@@ -22,6 +22,7 @@
   "license": "Apache-2.0",
   "devDependencies": {
     "@tsconfig/node20": "^20.1.6",
+    "@types/mime-types": "^3.0.1",
     "@types/node": "^20",
     "typescript": "^5.0.4"
   },
@@ -29,6 +30,7 @@
     "@cubejs-backend/shared": "1.7.42",
     "@octokit/core": "^5",
     "@octokit/plugin-rest-endpoint-methods": "^10",
+    "mime-types": "^3.0.2",
     "source-map-support": "^0.5.21"
   },
   "publishConfig": {
