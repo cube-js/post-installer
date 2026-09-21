@@ -21,8 +21,8 @@
   "author": "Cube Dev, Inc.",
   "license": "Apache-2.0",
   "devDependencies": {
-    "@tsconfig/node14": "^1.0.3",
-    "@types/node": "^14",
+    "@tsconfig/node20": "^20.1.6",
+    "@types/node": "^20",
     "typescript": "^5.0.4"
   },
   "dependencies": {
